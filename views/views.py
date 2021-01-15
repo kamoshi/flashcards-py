@@ -75,8 +75,8 @@ class MainWindowView(QObject):
         # Signals
         # toolbar
         self.signalManageCards = self._window.actionManageCards.triggered
-        self.manageDecksSignal = self._window.actionManageDecks.triggered
-        self.manageNotesSignal = self._window.actionManageNotes.triggered
+        self.signalManageDecks = self._window.actionManageDecks.triggered
+        self.signalManageNotes = self._window.actionManageNotes.triggered
         # details page
         self.signalDetailsCancel = self._buttonDetailsCancel.clicked
         self.signalDetailsStats = self._buttonDetailsStats.clicked
@@ -316,24 +316,52 @@ class NoteFormView:
         self._window.exec_()
 
 
-    class DeckListView:
-        def __init__(self):
-            self._template = "views/templates/deck_list.ui"
-            self._window = load_ui(self._template)
-            # references
-            self._listDecks: QListWidget = self._window.listDecks
-            self._buttonDelete: QPushButton = self._window.buttonDelete
-            self._buttonEdit: QPushButton = self._window.buttonEdit
-            self._buttonNotes: QPushButton = self._window.buttonNotes
-            self._buttonAdd: QPushButton = self._window.buttonAdd
-            # signals
-            self.signalDelete = self._buttonDelete.clicked
-            self.signalEdit = self._buttonEdit.clicked
-            self.signalNotes = self._buttonNotes.clicked
-            self.signalAdd = self._buttonAdd.clicked
+class DeckListView:
+    def __init__(self, names: List[str], ids: List[int]):
+        self._template = "views/templates/deck_list.ui"
+        self._window = load_ui(self._template)
+        self._ids = ids[:]
+        self._selectedIdx = -1
+        # references
+        self._listDecks: QListWidget = self._window.listDecks
+        self._buttonDelete: QPushButton = self._window.buttonDelete
+        self._buttonEdit: QPushButton = self._window.buttonEdit
+        self._buttonNotes: QPushButton = self._window.buttonNotes
+        self._buttonAdd: QPushButton = self._window.buttonAdd
+        # signals
+        self.signalDelete = self._buttonDelete.clicked
+        self.signalEdit = self._buttonEdit.clicked
+        self.signalNotes = self._buttonNotes.clicked
+        self.signalAdd = self._buttonAdd.clicked
+        # init
+        self._setButtonsEnabled(False)
+        self._listDecks.itemClicked.connect(self._selectedItem)
+        self.refresh(names, ids)
 
-        def close(self):
-            self._window.close()
+    def _setButtonsEnabled(self, mode: bool) -> None:
+        self._buttonDelete.setEnabled(mode)
+        self._buttonEdit.setEnabled(mode)
+        self._buttonNotes.setEnabled(mode)
 
-        def exec(self):
-            self._window.exec_()
+    def _selectedItem(self) -> None:
+        items = self._listDecks.selectedItems()
+        if len(items) != 1:
+            self.selectedIdx = -1
+            self._setButtonsEnabled(False)
+        else:
+            self.selectedIdx = self._listDecks.indexFromItem(items[0]).row()
+            self._setButtonsEnabled(True)
+
+    def refresh(self, deckNames: List[str], deckIds: List[int]) -> None:
+        self._selectedIdx = -1
+        self._setButtonsEnabled(False)
+        self._listDecks.clear()
+        for card in deckNames:
+            self._listDecks.addItem(card)
+        self._ids = deckIds[:]
+
+    def close(self) -> None:
+        self._window.close()
+
+    def exec(self) -> None:
+        self._window.exec_()

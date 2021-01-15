@@ -7,7 +7,7 @@ from sqlalchemy import and_
 from logic.studysession import StudySession
 from data.dbmodel import Card, Deck, Note, Review
 from views.views import CardFormView, MainWindowView, CardListView, ErrorMessage, InfoMessage, LayoutEditorView, \
-    NoteFormView
+    NoteFormView, DeckListView
 from data import dbmodel as dbm
 
 
@@ -18,6 +18,7 @@ class Controller:
         self._studySession: StudySession = StudySession()
         # signals
         self._mainWindow.signalManageCards.connect(self.openCardList)
+        self._mainWindow.signalManageDecks.connect(self.openDeckList)
         self._mainWindow.signalOpenDeck.connect(self._onDeckClicked)
         self._mainWindow.signalDetailsCancel.connect(self.openMainDeckList)
         self._mainWindow.signalDetailsStats.connect(self._onDetailsStats)
@@ -224,8 +225,11 @@ class Controller:
         info = InfoMessage("Saved layout")
         info.exec()
 
-    # TOOLBAR MANAGE DECKS
-    # TODO: Add, Delete decks; view notes
+    # TOOLBAR MANAGE DECKS TODO: delete edit notes add
+    def openDeckList(self):
+        decks: list[Deck] = self._session.query(Deck)
+        deckList = DeckListView([deck.d_name for deck in decks], [deck.d_id for deck in decks])
+        deckList.exec()
 
     # ADD NOTE FORM
     def addNote(self, d_id: int):
@@ -243,6 +247,7 @@ class Controller:
             error.exec()
         else:
             self._session.add(Note(n_data=json.dumps(data), d_id=d_id))
+            self._session.commit()
             info = InfoMessage("Added new note")
             info.exec()
             form.close()
