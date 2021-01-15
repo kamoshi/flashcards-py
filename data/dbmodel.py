@@ -12,7 +12,7 @@ Session = sessionmaker(bind=Engine)
 class Card(Base):
     __tablename__ = 'cards'
     c_id = Column(Integer, primary_key=True)
-    c_name = Column(String(20), nullable=False)
+    c_name = Column(String(20), nullable=False, unique=True)
     c_fields = Column(String(255), nullable=False)
     c_layout_f = Column(Text(1000))
     c_layout_b = Column(Text(1000))
@@ -24,7 +24,7 @@ class Card(Base):
 class Deck(Base):
     __tablename__ = 'decks'
     d_id = Column(Integer, primary_key=True)
-    d_name = Column(String(20), nullable=False)
+    d_name = Column(String(20), nullable=False, unique=True)
     c_id = Column(Integer, nullable=False)
 
     def __repr__(self):
