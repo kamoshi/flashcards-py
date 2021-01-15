@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>483</width>
-    <height>282</height>
+    <width>510</width>
+    <height>244</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Add Note</string>
+   <string>Note</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -159,9 +159,9 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="buttonAdd">
+      <widget class="QPushButton" name="buttonSave">
        <property name="text">
-        <string>Add</string>
+        <string>Save</string>
        </property>
       </widget>
      </item>

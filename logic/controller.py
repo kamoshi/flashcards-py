@@ -6,7 +6,8 @@ from sqlalchemy import and_
 
 from logic.studysession import StudySession
 from data.dbmodel import Card, Deck, Note, Review
-from views.views import CardFormView, MainWindowView, CardListView, ErrorMessage, InfoMessage, LayoutEditorView
+from views.views import CardFormView, MainWindowView, CardListView, ErrorMessage, InfoMessage, LayoutEditorView, \
+    NoteFormView
 from data import dbmodel as dbm
 
 
@@ -85,8 +86,7 @@ class Controller:
         # TODO: details stats
 
     def _onDetailsQuickAdd(self):
-        print("Details quick add")
-        # TODO: details quick add
+        self.addNote()
 
     def _onFlashcardClose(self):
         if self._studySession.isActive():
@@ -226,3 +226,7 @@ class Controller:
     # TOOLBAR MANAGE DECKS
     # TODO: Add, Delete decks; view notes
 
+    def addNote(self):
+        form = NoteFormView("Deck1", ["Test1", "Test2"])
+        form.exec()
+        print(form.getData())

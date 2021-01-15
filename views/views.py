@@ -3,7 +3,7 @@ from typing import Tuple, List
 from PySide2.QtCore import QFile, QIODevice, QObject, Signal
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtWidgets import QLineEdit, QVBoxLayout, QPushButton, QMessageBox, QWidgetItem, QListWidget, QDialog, \
-    QPlainTextEdit, QTextBrowser, QStackedWidget, QLabel
+    QPlainTextEdit, QTextBrowser, QStackedWidget, QLabel, QHBoxLayout
 
 from data.consts import HTML_TEMPLATE
 
@@ -280,3 +280,37 @@ class LayoutEditorView:
 
     def close(self) -> None:
         self._window.close()
+
+
+class NoteFormView:
+    def __init__(self, deck: str, fields: List[str], values: List[str] = None):
+        self._template = "views/templates/note_form.ui"
+        self._window = load_ui(self._template)
+        # references
+        self._labelDeck: QLabel = self._window.labelDeck
+        self._containerFields: QVBoxLayout = self._window.containerFields
+        self._buttonCancel: QPushButton = self._window.buttonCancel
+        self._buttonSave: QPushButton = self._window.buttonSave
+        # signals
+        self.signalSave = self._buttonSave.clicked
+        self.signalCancel = self._buttonCancel.clicked
+        # init
+        self._labelDeck.setText(f"Adding to: f{deck}")
+        self._dataFields: List[QLineEdit] = []
+        for i in range(len(fields)):
+            newLine = QHBoxLayout()
+            newLabel = QLabel(fields[i])
+            newEntry = QLineEdit(values[i] if values else None)
+            newLine.addWidget(newLabel)
+            newLine.addWidget(newEntry)
+            self._containerFields.addLayout(newLine)
+            self._dataFields.append(newEntry)
+
+    def getData(self):
+        return list(map(QLineEdit.text, self._dataFields))
+
+    def close(self):
+        self._window.close()
+
+    def exec(self):
+        self._window.exec_()
