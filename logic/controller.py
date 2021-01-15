@@ -86,7 +86,8 @@ class Controller:
         # TODO: details stats
 
     def _onDetailsQuickAdd(self):
-        self.addNote()
+        if self._studySession.isActive():
+            self.addNote(self._studySession.getDeck().d_id)
 
     def _onFlashcardClose(self):
         if self._studySession.isActive():
@@ -226,7 +227,23 @@ class Controller:
     # TOOLBAR MANAGE DECKS
     # TODO: Add, Delete decks; view notes
 
-    def addNote(self):
-        form = NoteFormView("Deck1", ["Test1", "Test2"])
+    # ADD NOTE FORM
+    def addNote(self, d_id: int):
+        deck = self._session.query(Deck).filter_by(d_id=d_id).one()
+        card = self._session.query(Card).filter_by(c_id=deck.c_id).one()
+        form = NoteFormView(deck.d_name, json.loads(card.c_fields))
+        form.signalCancel.connect(form.close)
+        form.signalSave.connect(lambda: self.addNoteSave(form, d_id))
         form.exec()
-        print(form.getData())
+
+    def addNoteSave(self, form: NoteFormView, d_id: int):
+        data = form.getData()
+        if "" in data:
+            error = ErrorMessage("Field can't be empty")
+            error.exec()
+        else:
+            self._session.add(Note(n_data=json.dumps(data), d_id=d_id))
+            info = InfoMessage("Added new note")
+            info.exec()
+            form.close()
+            self.openMainDetails(d_id) # refresh ui

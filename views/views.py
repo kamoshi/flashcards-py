@@ -295,7 +295,7 @@ class NoteFormView:
         self.signalSave = self._buttonSave.clicked
         self.signalCancel = self._buttonCancel.clicked
         # init
-        self._labelDeck.setText(f"Adding to: f{deck}")
+        self._labelDeck.setText(f"Adding to: {deck}")
         self._dataFields: List[QLineEdit] = []
         for i in range(len(fields)):
             newLine = QHBoxLayout()
