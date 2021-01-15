@@ -231,6 +231,7 @@ class Controller:
         deckList = DeckListView([deck.d_name for deck in decks], [deck.d_id for deck in decks])
         deckList.signalAdd.connect(lambda: self.addDeck(deckList))
         deckList.signalDelete.connect(lambda: self.deleteDeck(deckList))
+        deckList.signalEdit.connect(lambda: self.editDeck(deckList))
         deckList.exec()
 
     def addDeck(self, deckList: DeckListView):
@@ -267,7 +268,45 @@ class Controller:
             info.exec()
 
     def editDeck(self, deckList: DeckListView):
-        pass
+        selected = deckList.getSelectedId()
+        if selected == -1:
+            return
+        deck = self._session.query(Deck).filter_by(d_id=selected).one()
+        cards = list(map(lambda t: t[0], self._session.query(Card.c_name).all()))
+        editForm = DeckFormView(deck.d_name, cards)
+        editForm.signalCancel.connect(editForm.close)
+        editForm.signalSave.connect(lambda: self.editDeckSave(deck.d_id, deckList, editForm))
+        editForm.exec()
+
+    def editDeckSave(self, d_id: int, deckList: DeckListView, editForm: DeckFormView):
+        deckName, cardName = editForm.getData()
+        nameCheck = self._session.query(Deck).filter(and_(Deck.d_name==deckName, Deck.d_id!=d_id)).first()
+        if deckName == "" or cardName == "":
+            error = ErrorMessage(f"Fields cannot be empty.")
+            error.exec()
+        elif nameCheck:
+            error = ErrorMessage(f"Deck with this name already exists.")
+            error.exec()
+        else:
+            deck = self._session.query(Deck).filter_by(d_id=d_id).one()
+            newCard = self._session.query(Card.c_id, Card.c_fields).filter_by(c_name=cardName).one()
+            if deck.c_id != newCard.c_id:  # edited card
+                oldCard = self._session.query(Card.c_fields).filter_by(c_id=deck.c_id).one()
+                oldCardFieldsLen = len(json.loads(oldCard[0]))
+                newCardFieldsLen = len(json.loads(newCard[1]))
+                if oldCardFieldsLen != newCardFieldsLen:
+                    error = ErrorMessage(f"This card is incompatible, {newCardFieldsLen} fields instead of {oldCardFieldsLen}")
+                    error.exec()
+                    return
+                else:
+                    deck.c_id = newCard[0]
+            deck.d_name = deckName
+            self._session.commit()
+            info = InfoMessage("Saved new deck settings.")
+            newDecks = self._session.query(Deck.d_id, Deck.d_name).all()
+            deckList.refresh(list(map(lambda t: t[1], newDecks)), list(map(lambda t: t[0], newDecks)))
+            self._mainWindow.updateDecksList([(deck.d_id, deck.d_name) for deck in self._session.query(Deck).all()])
+            info.exec()
 
     def deleteDeck(self, deckList: DeckListView):
         selected = deckList.getSelectedId()
@@ -276,9 +315,11 @@ class Controller:
         deck = self._session.query(Deck).filter_by(d_id=selected).one()
         self._session.delete(deck)
         self._session.commit()
+        info = InfoMessage("Deleted a card")
         newDecks = self._session.query(Deck.d_id, Deck.d_name).all()
         deckList.refresh(list(map(lambda t: t[1], newDecks)), list(map(lambda t: t[0], newDecks)))
-        info = InfoMessage("Deleted a card")
+        self._mainWindow.updateDecksList([(deck.d_id, deck.d_name) for deck in self._session.query(Deck).all()])
+        self._mainWindow.setPage(0)
         info.exec()
 
     # ADD NOTE FORM
