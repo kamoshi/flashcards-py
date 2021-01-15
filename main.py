@@ -1,6 +1,6 @@
 import sys
 from PySide2.QtWidgets import QApplication
-from controller.controller import Controller
+from logic.controller import Controller
 
 
 if __name__ == '__main__':

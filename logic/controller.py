@@ -4,7 +4,7 @@ import time
 import sqlalchemy.orm
 from sqlalchemy import and_
 
-from controller.studysession import StudySession
+from logic.studysession import StudySession
 from data.dbmodel import Card, Deck, Note, Review
 from views.views import CardFormView, MainWindowView, CardListView, ErrorMessage, InfoMessage, LayoutEditorView
 from data import dbmodel as dbm
