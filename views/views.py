@@ -45,7 +45,7 @@ class ErrorMessage:
 
 
 class MainWindowView(QObject):
-    signalOpenDeck = Signal(str)
+    signalOpenDeck = Signal(int)
 
     def __init__(self):
         super().__init__()
@@ -102,9 +102,11 @@ class MainWindowView(QObject):
         for _ in range(self._containerDecks.count()):
             self._containerDecks.takeAt(0).widget().deleteLater()
         for (d_id, d_name) in decks:
-            button = QPushButton(d_name)
-            button.clicked.connect(lambda: self.signalOpenDeck.emit(button.text()))  # type: ignore
-            self._containerDecks.addWidget(button)
+            def _scope_fix(_d_id, _d_name):
+                button = QPushButton(d_name)
+                button.clicked.connect(lambda: self.signalOpenDeck.emit(_d_id))  # type: ignore
+                self._containerDecks.addWidget(button)
+            _scope_fix(d_id, d_name)
 
     def updateDeckDetails(self, name: str, notesTotal: int, notesToLearn: int):
         self._labelDeckName.setText(name)

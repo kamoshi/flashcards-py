@@ -77,8 +77,8 @@ class Controller:
         notes = self._session.query(Note).filter(and_(Note.d_id == deck.d_id, Note.n_next_r <= timeNow)).all()
         self._studySession.fill(card, deck, notes)
 
-    def _onDeckClicked(self, d_name: str):
-        deck = self._session.query(Deck).filter_by(d_name=d_name).first()
+    def _onDeckClicked(self, d_id: int):
+        deck = self._session.query(Deck).filter_by(d_id=d_id).first()
         if deck:
             self.openMainDetails(deck.d_id)
 
