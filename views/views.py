@@ -314,3 +314,26 @@ class NoteFormView:
 
     def exec(self):
         self._window.exec_()
+
+
+    class DeckListView:
+        def __init__(self):
+            self._template = "views/templates/deck_list.ui"
+            self._window = load_ui(self._template)
+            # references
+            self._listDecks: QListWidget = self._window.listDecks
+            self._buttonDelete: QPushButton = self._window.buttonDelete
+            self._buttonEdit: QPushButton = self._window.buttonEdit
+            self._buttonNotes: QPushButton = self._window.buttonNotes
+            self._buttonAdd: QPushButton = self._window.buttonAdd
+            # signals
+            self.signalDelete = self._buttonDelete.clicked
+            self.signalEdit = self._buttonEdit.clicked
+            self.signalNotes = self._buttonNotes.clicked
+            self.signalAdd = self._buttonAdd.clicked
+
+        def close(self):
+            self._window.close()
+
+        def exec(self):
+            self._window.exec_()
