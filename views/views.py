@@ -3,7 +3,7 @@ from typing import Tuple, List
 from PySide2.QtCore import QFile, QIODevice, QObject, Signal
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtWidgets import QLineEdit, QVBoxLayout, QPushButton, QMessageBox, QWidgetItem, QListWidget, QDialog, \
-    QPlainTextEdit, QTextBrowser, QStackedWidget, QLabel, QHBoxLayout
+    QPlainTextEdit, QTextBrowser, QStackedWidget, QLabel, QHBoxLayout, QComboBox
 
 from data.consts import HTML_TEMPLATE
 
@@ -147,10 +147,10 @@ class CardListView:
             self._listCards.addItem(card)
         self.ids = ids
         self.selectedIdx = -1
-        self.deleteSignal = self._buttonDelete.clicked
-        self.editSignal = self._buttonEdit.clicked
-        self.layoutSignal = self._buttonLayout.clicked
-        self.addSignal = self._buttonAdd.clicked
+        self.signalDelete = self._buttonDelete.clicked
+        self.signalEdit = self._buttonEdit.clicked
+        self.signalLayout = self._buttonLayout.clicked
+        self.signalAdd = self._buttonAdd.clicked
         self._listCards.itemClicked.connect(self.selectedItem)
 
     def _setButtonsEnabled(self, mode: bool) -> None:
@@ -201,8 +201,8 @@ class CardFormView:
         else:
             self._buttonAddField.clicked.connect(self.addField)
             self._buttonDeleteField.clicked.connect(self.deleteField)
-        self.cancelSignal = self._window.buttonCancel.clicked
-        self.saveSignal = self._window.buttonSave.clicked
+        self.signalCancel = self._window.buttonCancel.clicked
+        self.signalSave = self._window.buttonSave.clicked
         self._window.show()
 
     def deleteField(self):
@@ -346,11 +346,17 @@ class DeckListView:
     def _selectedItem(self) -> None:
         items = self._listDecks.selectedItems()
         if len(items) != 1:
-            self.selectedIdx = -1
+            self._selectedIdx = -1
             self._setButtonsEnabled(False)
         else:
-            self.selectedIdx = self._listDecks.indexFromItem(items[0]).row()
+            self._selectedIdx = self._listDecks.indexFromItem(items[0]).row()
             self._setButtonsEnabled(True)
+
+    def getSelectedId(self) -> int:
+        if self._selectedIdx > -1:
+            return self._ids[self._selectedIdx]
+        else:
+            return -1
 
     def refresh(self, deckNames: List[str], deckIds: List[int]) -> None:
         self._selectedIdx = -1
@@ -364,4 +370,30 @@ class DeckListView:
         self._window.close()
 
     def exec(self) -> None:
+        self._window.exec_()
+
+
+class DeckFormView:
+    def __init__(self, deckName: str, cardName: List[str]):
+        self._template = "views/templates/deck_form.ui"
+        self._window = load_ui(self._template)
+        # references
+        self._entryDeckName: QLineEdit = self._window.entryDeckName
+        self._comboTemplate: QComboBox = self._window.comboTemplate
+        self._buttonCancel: QPushButton = self._window.buttonCancel
+        self._buttonSave: QPushButton = self._window.buttonSave
+        # signals
+        self.signalCancel = self._buttonCancel.clicked
+        self.signalSave = self._buttonSave.clicked
+        # init
+        self._entryDeckName.setText(deckName)
+        self._comboTemplate.addItems(cardName)
+
+    def getData(self) -> Tuple[str, str]:
+        return self._entryDeckName.text(), str(self._comboTemplate.currentText())
+
+    def close(self):
+        self._window.close()
+
+    def exec(self):
         self._window.exec_()

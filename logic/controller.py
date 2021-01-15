@@ -7,7 +7,7 @@ from sqlalchemy import and_
 from logic.studysession import StudySession
 from data.dbmodel import Card, Deck, Note, Review
 from views.views import CardFormView, MainWindowView, CardListView, ErrorMessage, InfoMessage, LayoutEditorView, \
-    NoteFormView, DeckListView
+    NoteFormView, DeckListView, DeckFormView
 from data import dbmodel as dbm
 
 
@@ -121,16 +121,16 @@ class Controller:
     def openCardList(self):
         cards: list[Card] = self._session.query(Card)
         cardList = CardListView([card.c_name for card in cards], [card.c_id for card in cards])
-        cardList.addSignal.connect(lambda: self.addCard(cardList))
-        cardList.deleteSignal.connect(lambda: self.deleteCard(cardList))
-        cardList.editSignal.connect(lambda: self.editCard(cardList))
-        cardList.layoutSignal.connect(lambda: self.editLayout(cardList))
+        cardList.signalAdd.connect(lambda: self.addCard(cardList))
+        cardList.signalDelete.connect(lambda: self.deleteCard(cardList))
+        cardList.signalEdit.connect(lambda: self.editCard(cardList))
+        cardList.signalLayout.connect(lambda: self.editLayout(cardList))
         cardList.exec()
 
     def addCard(self, cardList: CardListView):
         cardForm = CardFormView("New Card", ["Field1", "Field2"], True)
-        cardForm.cancelSignal.connect(cardForm.close)
-        cardForm.saveSignal.connect(lambda: self.addCardSave(cardList, cardForm))
+        cardForm.signalCancel.connect(cardForm.close)
+        cardForm.signalSave.connect(lambda: self.addCardSave(cardList, cardForm))
         cardForm.exec()
 
     def addCardSave(self, cardList: CardListView, cardForm: CardFormView):
@@ -179,8 +179,8 @@ class Controller:
             canEditFields = True if self._session.query(Deck).filter_by(c_id=target).count() == 0 else False
             card = self._session.query(Card).filter_by(c_id=target).one()
             editForm = CardFormView(card.c_name, json.loads(card.c_fields), canEditFields)
-            editForm.cancelSignal.connect(editForm.close)
-            editForm.saveSignal.connect(lambda: self.editCardSave(card.c_id, cardList, editForm))
+            editForm.signalCancel.connect(editForm.close)
+            editForm.signalSave.connect(lambda: self.editCardSave(card.c_id, cardList, editForm))
             editForm.exec()
 
     def editCardSave(self, cid: int, cardList, cardForm):
@@ -229,7 +229,57 @@ class Controller:
     def openDeckList(self):
         decks: list[Deck] = self._session.query(Deck)
         deckList = DeckListView([deck.d_name for deck in decks], [deck.d_id for deck in decks])
+        deckList.signalAdd.connect(lambda: self.addDeck(deckList))
+        deckList.signalDelete.connect(lambda: self.deleteDeck(deckList))
         deckList.exec()
+
+    def addDeck(self, deckList: DeckListView):
+        cards = [card.c_name for card in self._session.query(Card).all()]
+        if len(cards) == 0:
+            error = ErrorMessage("Please add card templates first")
+            error.exec()
+        else:
+            deckForm = DeckFormView("New Deck", cards)
+            deckForm.signalCancel.connect(deckForm.close)
+            deckForm.signalSave.connect(lambda: self.addDeckSave(deckList, deckForm))
+            deckForm.exec()
+
+    def addDeckSave(self, deckList: DeckListView, deckForm: DeckFormView):
+        deckName, cardName = deckForm.getData()
+        card = self._session.query(Card).filter_by(c_name=cardName).first()
+        if deckName == "" or cardName == "":
+            error = ErrorMessage("Fields cannot be empty")
+            error.exec()
+        elif self._session.query(Deck).filter_by(d_name=deckName).first():
+            error = ErrorMessage("Deck name must be unique")
+            error.exec()
+        elif not card:
+            error = ErrorMessage(f"Couldn't find card {cardName}")
+            error.exec()
+        else:
+            newDeck = Deck(d_name=deckName, c_id=card.c_id)
+            self._session.add(newDeck)
+            self._session.commit()
+            info = InfoMessage("Added new deck")
+            newDecks = self._session.query(Deck.d_id, Deck.d_name).all()
+            deckList.refresh(list(map(lambda t: t[1], newDecks)), list(map(lambda t: t[0], newDecks)))
+            self._mainWindow.updateDecksList([(deck.d_id, deck.d_name) for deck in self._session.query(Deck).all()])
+            info.exec()
+
+    def editDeck(self, deckList: DeckListView):
+        pass
+
+    def deleteDeck(self, deckList: DeckListView):
+        selected = deckList.getSelectedId()
+        if selected == -1:
+            return
+        deck = self._session.query(Deck).filter_by(d_id=selected).one()
+        self._session.delete(deck)
+        self._session.commit()
+        newDecks = self._session.query(Deck.d_id, Deck.d_name).all()
+        deckList.refresh(list(map(lambda t: t[1], newDecks)), list(map(lambda t: t[0], newDecks)))
+        info = InfoMessage("Deleted a card")
+        info.exec()
 
     # ADD NOTE FORM
     def addNote(self, d_id: int):
