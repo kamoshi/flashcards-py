@@ -76,7 +76,6 @@ class MainWindowView(QObject):
         # toolbar
         self.signalManageCards = self._window.actionManageCards.triggered
         self.signalManageDecks = self._window.actionManageDecks.triggered
-        self.signalManageNotes = self._window.actionManageNotes.triggered
         # details page
         self.signalDetailsCancel = self._buttonDetailsCancel.clicked
         self.signalDetailsStats = self._buttonDetailsStats.clicked
