@@ -7,7 +7,7 @@ from sqlalchemy import and_
 from logic.studysession import StudySession
 from data.dbmodel import Card, Deck, Note, Review
 from views.views import CardFormView, MainWindowView, CardListView, ErrorMessage, InfoMessage, LayoutEditorView, \
-    NoteFormView, DeckListView, DeckFormView
+    NoteFormView, DeckListView, DeckFormView, NoteBrowserView
 from data import dbmodel as dbm
 
 
@@ -232,6 +232,7 @@ class Controller:
         deckList.signalAdd.connect(lambda: self.addDeck(deckList))
         deckList.signalDelete.connect(lambda: self.deleteDeck(deckList))
         deckList.signalEdit.connect(lambda: self.editDeck(deckList))
+        deckList.signalNotes.connect(lambda: self.viewNotes(deckList))
         deckList.exec()
 
     def addDeck(self, deckList: DeckListView):
@@ -321,6 +322,17 @@ class Controller:
         self._mainWindow.updateDecksList([(deck.d_id, deck.d_name) for deck in self._session.query(Deck).all()])
         self._mainWindow.setPage(0)
         info.exec()
+
+    def viewNotes(self, deckList: DeckListView):
+        selected = deckList.getSelectedId()
+        if selected == -1:
+            return
+        deck = self._session.query(Deck).filter_by(d_id=selected).one()
+        card = self._session.query(Card).filter_by(c_id=deck.c_id).one()
+        notes = self._session.query(Note.n_id, Note.n_data).filter_by(d_id=selected).all()
+        notesData = list(map(lambda t: (t[0], json.loads(t[1])), notes))
+        noteBrowser = NoteBrowserView(deck.d_name, json.loads(card.c_fields), notesData)
+        noteBrowser.exec()
 
     # ADD NOTE FORM
     def addNote(self, d_id: int):

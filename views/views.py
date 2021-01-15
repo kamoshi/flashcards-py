@@ -1,9 +1,10 @@
 from typing import Tuple, List
 
-from PySide2.QtCore import QFile, QIODevice, QObject, Signal
+from PySide2 import QtCore
+from PySide2.QtCore import QFile, QIODevice, QObject, Signal, Qt
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtWidgets import QLineEdit, QVBoxLayout, QPushButton, QMessageBox, QWidgetItem, QListWidget, QDialog, \
-    QPlainTextEdit, QTextBrowser, QStackedWidget, QLabel, QHBoxLayout, QComboBox
+    QPlainTextEdit, QTextBrowser, QStackedWidget, QLabel, QHBoxLayout, QComboBox, QTableWidget, QTableWidgetItem
 
 from data.consts import HTML_TEMPLATE
 
@@ -392,6 +393,60 @@ class DeckFormView:
 
     def getData(self) -> Tuple[str, str]:
         return self._entryDeckName.text(), str(self._comboTemplate.currentText())
+
+    def close(self):
+        self._window.close()
+
+    def exec(self):
+        self._window.exec_()
+
+
+class NoteBrowserView:
+    def __init__(self, deck: str, fields: List[str], data: List[Tuple[int, List[str]]]):
+        self._template = "views/templates/note_browser.ui"
+        self._window: QDialog = load_ui(self._template)
+        self._data: List[Tuple[int, List[str]]] = []
+        self._selectedIdx = -1
+        # references
+        self._labelDeckName: QLabel = self._window.labelDeckName
+        self._tableNotes: QTableWidget = self._window.tableNotes
+        self._buttonDelete: QPushButton = self._window.buttonDelete
+        self._buttonEdit: QPushButton = self._window.buttonEdit
+        self._buttonAdd: QPushButton = self._window.buttonAdd
+        # signals
+        self.signalDelete = self._buttonDelete.clicked
+        self.signalEdit = self._buttonEdit.clicked
+        self.signalAdd = self._buttonAdd.clicked
+        self._tableNotes.clicked.connect(self._onClicked)
+        # init
+        self._labelDeckName.setText(deck)
+        self._tableNotes.setSelectionBehavior(QTableWidget.SelectRows)
+        self.refresh(fields, data)
+
+    def _onClicked(self):
+        self._selectedIdx = self._tableNotes.currentRow()
+        self._setButtonsEnabled(True)
+
+    def _setButtonsEnabled(self, state: bool):
+        self._buttonDelete.setEnabled(state)
+        self._buttonEdit.setEnabled(state)
+
+    def refresh(self, fields: List[str], data: List[Tuple[int, List[str]]]):
+        if not data:
+            return
+        self._data = list(map(lambda t: (t[0], t[1].copy()), data))  # deep copy
+        self._tableNotes.clear()
+        self._tableNotes.setColumnCount(len(fields))
+        self._tableNotes.setRowCount(len(self._data))
+        self._tableNotes.setHorizontalHeaderLabels(fields)
+        for r in range(len(data)):
+            n_id, n_data = data[r]
+            for c in range(len(n_data)):
+                item = QTableWidgetItem(n_data[c])
+                item.setFlags(QtCore.Qt.ItemIsEnabled|QtCore.Qt.ItemIsSelectable)
+                self._tableNotes.setItem(r, c, item)
+        self._setButtonsEnabled(False)
+        self._selectedIdx = -1
 
     def close(self):
         self._window.close()
