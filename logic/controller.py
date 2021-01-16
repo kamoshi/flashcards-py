@@ -332,7 +332,68 @@ class Controller:
         notes = self._session.query(Note.n_id, Note.n_data).filter_by(d_id=selected).all()
         notesData = list(map(lambda t: (t[0], json.loads(t[1])), notes))
         noteBrowser = NoteBrowserView(deck.d_name, json.loads(card.c_fields), notesData)
+        noteBrowser.signalAdd.connect(lambda: self.viewNotesAdd(card, deck, noteBrowser))
+        noteBrowser.signalEdit.connect(lambda: self.viewNotesEdit(card, deck, noteBrowser))
+        noteBrowser.signalDelete.connect(lambda: self.viewNotesDelete(card, deck, noteBrowser))
         noteBrowser.exec()
+
+    def viewNotesAdd(self, card: Card, deck: Deck, noteBrowser: NoteBrowserView):
+        noteForm = NoteFormView(deck.d_name, json.loads(card.c_fields))
+        noteForm.signalCancel.connect(noteForm.close)
+        noteForm.signalSave.connect(lambda: self.viewNotesAddSave(card, deck, noteBrowser, noteForm))
+        noteForm.exec()
+
+    def viewNotesAddSave(self, card: Card, deck: Deck, noteBrowser: NoteBrowserView, noteForm: NoteFormView):
+        data = noteForm.getData()
+        if "" in data:
+            error = ErrorMessage("Field cannot be empty.")
+            error.exec()
+        else:
+            newNote = Note(n_data=json.dumps(data), d_id=deck.d_id)
+            self._session.add(newNote)
+            self._session.commit()
+            info = InfoMessage("Added new note.")
+            notes = self._session.query(Note.n_id, Note.n_data).filter_by(d_id=deck.d_id).all()
+            notesData = list(map(lambda t: (t[0], json.loads(t[1])), notes))
+            noteBrowser.refresh(json.loads(card.c_fields), notesData)
+            info.exec()
+            noteForm.close()
+
+    def viewNotesEdit(self, card: Card, deck: Deck, noteBrowser: NoteBrowserView):
+        selected = noteBrowser.getSelectedId()
+        note = self._session.query(Note).filter_by(n_id=selected).one()
+        noteForm = NoteFormView(deck.d_name, json.loads(card.c_fields), json.loads(note.n_data))
+        noteForm.signalCancel.connect(noteForm.close)
+        noteForm.signalSave.connect(lambda: self.viewNotesEditSave(card, deck, noteBrowser, noteForm))
+        noteForm.exec()
+
+    def viewNotesEditSave(self, card: Card, deck: Deck, noteBrowser: NoteBrowserView, noteForm: NoteFormView):
+        selected = noteBrowser.getSelectedId()
+        data = noteForm.getData()
+        if "" in data:
+            error = ErrorMessage("Field cannot be empty")
+            error.exec()
+        else:
+            note = self._session.query(Note).filter_by(n_id=selected).one()
+            note.n_data = json.dumps(data)
+            self._session.commit()
+            info = InfoMessage("Saved edited note.")
+            notes = self._session.query(Note.n_id, Note.n_data).filter_by(d_id=deck.d_id).all()
+            notesData = list(map(lambda t: (t[0], json.loads(t[1])), notes))
+            noteBrowser.refresh(json.loads(card.c_fields), notesData)
+            info.exec()
+            noteForm.close()
+
+    def viewNotesDelete(self, card: Card, deck: Deck, noteBrowser: NoteBrowserView):
+        selected = noteBrowser.getSelectedId()
+        note = self._session.query(Note).filter_by(n_id=selected).one()
+        self._session.delete(note)
+        self._session.commit()
+        info = InfoMessage("Deleted note")
+        notes = self._session.query(Note.n_id, Note.n_data).filter_by(d_id=deck.d_id).all()
+        notesData = list(map(lambda t: (t[0], json.loads(t[1])), notes))
+        noteBrowser.refresh(json.loads(card.c_fields), notesData)
+        info.exec()
 
     # ADD NOTE FORM
     def addNote(self, d_id: int):

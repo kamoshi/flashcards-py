@@ -1,7 +1,7 @@
 from typing import Tuple, List
 
 from PySide2 import QtCore
-from PySide2.QtCore import QFile, QIODevice, QObject, Signal, Qt
+from PySide2.QtCore import QFile, QIODevice, QObject, Signal
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtWidgets import QLineEdit, QVBoxLayout, QPushButton, QMessageBox, QWidgetItem, QListWidget, QDialog, \
     QPlainTextEdit, QTextBrowser, QStackedWidget, QLabel, QHBoxLayout, QComboBox, QTableWidget, QTableWidgetItem
@@ -97,13 +97,13 @@ class MainWindowView(QObject):
             return
         self._stackedWidget.setCurrentIndex(idx)
 
-    # noinspection PyUnresolvedReferences
     def updateDecksList(self, decks: List[Tuple[int, str]]):
         for _ in range(self._containerDecks.count()):
             self._containerDecks.takeAt(0).widget().deleteLater()
         for (d_id, d_name) in decks:
             def _scope_fix(_d_id, _d_name):
                 button = QPushButton(d_name)
+                # noinspection PyUnresolvedReferences
                 button.clicked.connect(lambda: self.signalOpenDeck.emit(_d_id))  # type: ignore
                 self._containerDecks.addWidget(button)
             _scope_fix(d_id, d_name)
@@ -447,6 +447,12 @@ class NoteBrowserView:
                 self._tableNotes.setItem(r, c, item)
         self._setButtonsEnabled(False)
         self._selectedIdx = -1
+
+    def getSelectedId(self) -> int:
+        if self._selectedIdx == -1:
+            return -1
+        else:
+            return self._data[self._selectedIdx][0]
 
     def close(self):
         self._window.close()
