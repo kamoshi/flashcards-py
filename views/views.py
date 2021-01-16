@@ -4,7 +4,8 @@ from PySide2 import QtCore
 from PySide2.QtCore import QFile, QIODevice, QObject, Signal
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtWidgets import QLineEdit, QVBoxLayout, QPushButton, QMessageBox, QWidgetItem, QListWidget, QDialog, \
-    QPlainTextEdit, QTextBrowser, QStackedWidget, QLabel, QHBoxLayout, QComboBox, QTableWidget, QTableWidgetItem
+    QPlainTextEdit, QTextBrowser, QStackedWidget, QLabel, QHBoxLayout, QComboBox, QTableWidget, QTableWidgetItem, \
+    QFileDialog
 
 from data.consts import HTML_TEMPLATE
 
@@ -77,6 +78,8 @@ class MainWindowView(QObject):
         # toolbar
         self.signalManageCards = self._window.actionManageCards.triggered
         self.signalManageDecks = self._window.actionManageDecks.triggered
+        self.signalBatchImport = self._window.actionBatchImport.triggered
+        self.signalBatchExport = self._window.actionBatchExport.triggered
         # details page
         self.signalDetailsCancel = self._buttonDetailsCancel.clicked
         self.signalDetailsStats = self._buttonDetailsStats.clicked
@@ -453,6 +456,43 @@ class NoteBrowserView:
             return -1
         else:
             return self._data[self._selectedIdx][0]
+
+    def close(self):
+        self._window.close()
+
+    def exec(self):
+        self._window.exec_()
+
+
+class ExportFormView:
+    def __init__(self, decks: List[str]):
+        self._template = "views/templates/export_form.ui"
+        self._window: QDialog = load_ui(self._template)
+        self._chosen = ("", "")
+        # references
+        self._comboDeckSelector: QComboBox = self._window.comboDeckSelector
+        self._entryFileLocation: QLineEdit = self._window.entryFileLocation
+        self._buttonFileLocation: QPushButton = self._window.buttonFileLocation
+        self._buttonCancel: QPushButton = self._window.buttonCancel
+        self._buttonExport: QPushButton = self._window.buttonExport
+        # signals
+        self._buttonCancel.clicked.connect(self.close)
+        self._buttonFileLocation.clicked.connect(self._onChooseFile)
+        self.signalExport = self._buttonExport.clicked
+        # init
+        self._entryFileLocation.setReadOnly(True)
+        self._comboDeckSelector.addItems(decks)
+
+    def _onChooseFile(self):
+        fileDialog = QFileDialog()
+        self._chosen = fileDialog.getOpenFileName()
+        if self._chosen:
+            self._entryFileLocation.setText(self._chosen[0])
+        else:
+            self._entryFileLocation.setText("Please choose export location")
+
+    def getData(self) -> Tuple[str, str]:
+        return str(self._comboDeckSelector.currentText()), self._chosen[0]
 
     def close(self):
         self._window.close()

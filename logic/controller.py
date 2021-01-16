@@ -4,10 +4,11 @@ import time
 import sqlalchemy.orm
 from sqlalchemy import and_
 
+from logic import batchutils
 from logic.studysession import StudySession
 from data.dbmodel import Card, Deck, Note, Review
 from views.views import CardFormView, MainWindowView, CardListView, ErrorMessage, InfoMessage, LayoutEditorView, \
-    NoteFormView, DeckListView, DeckFormView, NoteBrowserView
+    NoteFormView, DeckListView, DeckFormView, NoteBrowserView, ExportFormView
 from data import dbmodel as dbm
 
 
@@ -30,6 +31,8 @@ class Controller:
         self._mainWindow.signalFlashcardEasy.connect(lambda: self._onFlashcardRate(rate=5))
         self._mainWindow.signalFlashcardOK.connect(lambda: self._onFlashcardRate(rate=3))
         self._mainWindow.signalFlashcardHard.connect(lambda: self._onFlashcardRate(rate=1))
+        self._mainWindow.signalBatchImport.connect(self._onBatchImport)
+        self._mainWindow.signalBatchExport.connect(self._onBatchExport)
         # init
         self.openMainDeckList()
 
@@ -115,6 +118,38 @@ class Controller:
     def _onFlashcardStats(self):
         print("Flashcard stats")
         # TODO: flashcard stats
+
+    # IMPORT / EXPORT
+
+    def _onBatchImport(self):
+        pass
+
+    def _onBatchExport(self):
+        decks = self._session.query(Deck.d_name).all()
+        exportForm = ExportFormView(list(map(lambda t: t[0], decks)))
+        exportForm.signalExport.connect(lambda: self.batchExport(exportForm))
+        exportForm.exec()
+
+    def batchExport(self, exportForm: ExportFormView):
+        deckName, filePath = exportForm.getData()
+        if not deckName or not filePath:
+            return
+        deck = self._session.query(Deck).filter_by(d_name=deckName).first()
+        if not deck:
+            return
+        card = self._session.query(Card).filter_by(c_id=deck.c_id).first()
+        if not card:
+            return
+        notes = self._session.query(Note).filter_by(d_id=deck.d_id).all()
+        jsonOut = batchutils.convertToJson(card, deck, notes)
+        if not jsonOut:
+            error = ErrorMessage("Data appears to be corrupted")
+            error.exec()
+        else:
+            with open(filePath, "w") as file:
+                file.write(jsonOut)
+            info = InfoMessage("Exported deck to file successfully")
+            info.exec()
 
     # TOOLBAR MANAGE CARDS
 
@@ -225,7 +260,8 @@ class Controller:
         info = InfoMessage("Saved layout")
         info.exec()
 
-    # TOOLBAR MANAGE DECKS TODO: delete edit notes add
+    # TOOLBAR MANAGE DECKS
+
     def openDeckList(self):
         decks: list[Deck] = self._session.query(Deck)
         deckList = DeckListView([deck.d_name for deck in decks], [deck.d_id for deck in decks])
@@ -396,6 +432,7 @@ class Controller:
         info.exec()
 
     # ADD NOTE FORM
+
     def addNote(self, d_id: int):
         deck = self._session.query(Deck).filter_by(d_id=d_id).one()
         card = self._session.query(Card).filter_by(c_id=deck.c_id).one()
