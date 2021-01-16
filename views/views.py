@@ -499,3 +499,36 @@ class ExportFormView:
 
     def exec(self):
         self._window.exec_()
+
+
+class ImportFormView:
+    def __init__(self):
+        self._template = "views/templates/import_form.ui"
+        self._window: QDialog = load_ui(self._template)
+        self._chosen = ("", "")
+        # references
+        self._buttonChooseFile: QPushButton = self._window.buttonChooseFile
+        self._entryFileLocation: QLineEdit = self._window.entryFileLocation
+        self._buttonCancel: QPushButton = self._window.buttonCancel
+        self._buttonImport:QPushButton = self._window.buttonImport
+        # signals
+        self._buttonCancel.clicked.connect(self.close)
+        self.signalImport = self._buttonImport.clicked
+
+    def _onChooseFile(self):
+        fileDialog = QFileDialog()
+        self._chosen = fileDialog.getOpenFileName()
+        if self._chosen:
+            self._entryFileLocation.setText(self._chosen[0])
+        else:
+            self._entryFileLocation.setText("Please choose export location")
+
+
+    def getData(self) -> str:
+        return self._chosen[0]
+
+    def close(self):
+        self._window.close()
+
+    def exec(self):
+        self._window.exec_()
