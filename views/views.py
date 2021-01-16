@@ -512,8 +512,11 @@ class ImportFormView:
         self._buttonCancel: QPushButton = self._window.buttonCancel
         self._buttonImport:QPushButton = self._window.buttonImport
         # signals
+        self._buttonChooseFile.clicked.connect(self._onChooseFile)
         self._buttonCancel.clicked.connect(self.close)
         self.signalImport = self._buttonImport.clicked
+        # init
+        self._entryFileLocation.setReadOnly(True)
 
     def _onChooseFile(self):
         fileDialog = QFileDialog()
@@ -522,7 +525,6 @@ class ImportFormView:
             self._entryFileLocation.setText(self._chosen[0])
         else:
             self._entryFileLocation.setText("Please choose export location")
-
 
     def getData(self) -> str:
         return self._chosen[0]

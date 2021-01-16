@@ -8,7 +8,7 @@ from logic import batchutils
 from logic.studysession import StudySession
 from data.dbmodel import Card, Deck, Note, Review
 from views.views import CardFormView, MainWindowView, CardListView, ErrorMessage, InfoMessage, LayoutEditorView, \
-    NoteFormView, DeckListView, DeckFormView, NoteBrowserView, ExportFormView
+    NoteFormView, DeckListView, DeckFormView, NoteBrowserView, ExportFormView, ImportFormView
 from data import dbmodel as dbm
 
 
@@ -122,7 +122,41 @@ class Controller:
     # IMPORT / EXPORT
 
     def _onBatchImport(self):
-        pass
+        importForm = ImportFormView()
+        importForm.signalImport.connect(lambda: self.batchImport(importForm))
+        importForm.exec()
+
+    def batchImport(self, importForm: ImportFormView):
+        path = importForm.getData()
+        if not path:
+            error = ErrorMessage("Please choose which file to import")
+            error.exec()
+        else:
+            try:
+                with open(path, "r") as file:
+                    data = file.read()
+                    result = batchutils.convertFromJson(data)
+            except:  # noinspection PyBroadException
+                error = ErrorMessage("Malformed file")
+                error.exec()
+                return
+            if not result:
+                error = ErrorMessage("Malformed file")
+                error.exec()
+            else:
+                card, deck, notes = result
+                card.c_name = f"{card.c_name}_{int(time.time())}"
+                self._session.add(card)
+                self._session.commit()
+                deck.d_name = f"{deck.d_name}_{int(time.time())}"
+                deck.c_id = card.c_id
+                self._session.add(deck)
+                self._session.commit()
+                for note in notes:
+                    note.d_id = deck.d_id
+                    self._session.add(note)
+                self._session.commit()
+                self._mainWindow.updateDecksList([(deck.d_id, deck.d_name) for deck in self._session.query(Deck).all()])
 
     def _onBatchExport(self):
         decks = self._session.query(Deck.d_name).all()
@@ -350,9 +384,10 @@ class Controller:
         if selected == -1:
             return
         deck = self._session.query(Deck).filter_by(d_id=selected).one()
+        self._session.query(Note).filter_by(d_id=deck.d_id).delete()
         self._session.delete(deck)
         self._session.commit()
-        info = InfoMessage("Deleted a card")
+        info = InfoMessage("Deleted a deck")
         newDecks = self._session.query(Deck.d_id, Deck.d_name).all()
         deckList.refresh(list(map(lambda t: t[1], newDecks)), list(map(lambda t: t[0], newDecks)))
         self._mainWindow.updateDecksList([(deck.d_id, deck.d_name) for deck in self._session.query(Deck).all()])
