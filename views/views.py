@@ -1,3 +1,4 @@
+import time
 from typing import Tuple, List
 
 from PySide2 import QtCore
@@ -8,6 +9,8 @@ from PySide2.QtWidgets import QLineEdit, QVBoxLayout, QPushButton, QMessageBox, 
     QFileDialog
 
 from data.consts import HTML_TEMPLATE
+from data.dbmodel import Note, Review
+from views.classes.stat_windows import DeckStatsWindow, NoteStatsWindow
 
 
 def load_ui(path: str):
@@ -528,6 +531,78 @@ class ImportFormView:
 
     def getData(self) -> str:
         return self._chosen[0]
+
+    def close(self):
+        self._window.close()
+
+    def exec(self):
+        self._window.exec_()
+
+
+class DeckStatsView:
+    def __init__(self, notes: List[Note]):
+        self._window: QDialog = DeckStatsWindow()
+        self.prepareDataPie(notes)
+        self.prepareDataGraph(notes)
+
+    def prepareDataPie(self, notes: List[Note]):
+        maturity = {
+            "New": 0,
+            "Young": 0,
+            "Adult": 0,
+            "Old":0
+        }
+        for note in notes:
+            diff = note.n_last_r - note.n_next_r  # how mature is the note?
+            oneDay = 60 * 60 * 24
+            if diff <= oneDay:
+                maturity["New"] += 1
+            elif oneDay < diff <= oneDay * 7:
+                maturity["Young"] += 1
+            elif oneDay * 7 < diff <= oneDay * 31:
+                maturity["Adult"] += 1
+            else:
+                maturity["Old"] += 1
+        self._window.setPieChartData(maturity.items())
+
+    def prepareDataGraph(self, notes: List[Note]):
+        daysFromNow = {}
+        oneDay = 60 * 60 * 24
+        for note in notes:
+            waitTimeDays = max(0, note.n_next_r - int(time.time())) // oneDay
+            if waitTimeDays in daysFromNow:
+                daysFromNow[waitTimeDays] += 1
+            else:
+                daysFromNow[waitTimeDays] = 1
+        preparedData = []
+        for i in range(0, 31):
+            if i in daysFromNow:
+                preparedData.append(daysFromNow[i])
+            else:
+                preparedData.append(0)
+        self._window.setBarChartData(preparedData)
+
+    def close(self):
+        self._window.close()
+
+    def exec(self):
+        self._window.exec_()
+
+
+class NoteStatsView:
+    def __init__(self, reviews: List[Review]):
+        self._window: QDialog = NoteStatsWindow()
+        self.prepareDataPie(reviews)
+
+    def prepareDataPie(self, reviews: List[Review]):
+        data = {}
+        for review in reviews:
+            ease = review.r_ease
+            if ease in data:
+                data[ease] += 1
+            else:
+                data[ease] = 1
+        self._window.setPieChartData(map(lambda t: (str(t[0]), t[1]), data.items()))
 
     def close(self):
         self._window.close()

@@ -8,7 +8,8 @@ from logic import batchutils
 from logic.studysession import StudySession
 from data.dbmodel import Card, Deck, Note, Review
 from views.views import CardFormView, MainWindowView, CardListView, ErrorMessage, InfoMessage, LayoutEditorView, \
-    NoteFormView, DeckListView, DeckFormView, NoteBrowserView, ExportFormView, ImportFormView
+    NoteFormView, DeckListView, DeckFormView, NoteBrowserView, ExportFormView, ImportFormView, DeckStatsView, \
+    NoteStatsView
 from data import dbmodel as dbm
 
 
@@ -86,8 +87,11 @@ class Controller:
             self.openMainDetails(deck.d_id)
 
     def _onDetailsStats(self):
-        print("Details stats")
-        # TODO: details stats
+        if not self._studySession.isActive():
+            return
+        deck = self._studySession.getDeck()
+        if deck:
+            self.display_deck_stats(deck.d_id)
 
     def _onDetailsQuickAdd(self):
         if self._studySession.isActive():
@@ -116,8 +120,11 @@ class Controller:
         self.openMainFlashcard(displayFront=True)
 
     def _onFlashcardStats(self):
-        print("Flashcard stats")
-        # TODO: flashcard stats
+        if not self._studySession.isActive():
+            return
+        note = self._studySession.peekNextNote()
+        if note:
+            self.display_flashcard_stats(note.n_id)
 
     # IMPORT / EXPORT
 
@@ -488,3 +495,14 @@ class Controller:
             info.exec()
             form.close()
             self.openMainDetails(d_id) # refresh ui
+
+    # STATS
+    def display_deck_stats(self, d_id):
+        notes = self._session.query(Note).filter_by(d_id=d_id).all()
+        window = DeckStatsView(notes)
+        window.exec()
+
+    def display_flashcard_stats(self, n_id):
+        reviews = self._session.query(Review).filter_by(n_id=n_id).all()
+        window = NoteStatsView(reviews)
+        window.exec()
