@@ -215,6 +215,7 @@ class Controller:
     # TOOLBAR MANAGE CARDS
 
     def openCardList(self):
+        """Open card list dialog"""
         cards: list[Card] = self._session.query(Card)
         cardList = CardListView([card.c_name for card in cards], [card.c_id for card in cards])
         cardList.signalAdd.connect(lambda: self.addCard(cardList))
@@ -224,12 +225,14 @@ class Controller:
         cardList.exec()
 
     def addCard(self, cardList: CardListView):
+        """Open add card dialog from card list"""
         cardForm = CardFormView("New Card", ["Field1", "Field2"], True)
         cardForm.signalCancel.connect(cardForm.close)
         cardForm.signalSave.connect(lambda: self.addCardSave(cardList, cardForm))
         cardForm.exec()
 
     def addCardSave(self, cardList: CardListView, cardForm: CardFormView):
+        """Save data from Add card dialog, refresh card list"""
         name, fields = cardForm.getFields()
         if name == "" or "" in fields:
             error = ErrorMessage("Fields cannot be empty")
@@ -251,6 +254,7 @@ class Controller:
             info.exec()
 
     def deleteCard(self, cardList: CardListView):
+        """Delete card from card list, refresh card list"""
         if not cardList.selectedIdx > -1:
             pass
         else:
@@ -268,6 +272,7 @@ class Controller:
                 info.exec()
 
     def editCard(self, cardList: CardListView):
+        """Edit card from card list"""
         if not cardList.selectedIdx > -1:
             pass
         else:
@@ -280,6 +285,7 @@ class Controller:
             editForm.exec()
 
     def editCardSave(self, cid: int, cardList, cardForm):
+        """Edit card from card, save card list"""
         name, fields = cardForm.getFields()
         if name == "" or "" in fields:
             error = ErrorMessage("Fields cannot be empty")
@@ -301,6 +307,7 @@ class Controller:
             info.exec()
 
     def editLayout(self, cardList: CardListView):
+        """Edit layout of a card from card list"""
         if not cardList.selectedIdx > -1:
             pass
         else:
@@ -315,6 +322,7 @@ class Controller:
             editForm.exec()
 
     def editLayoutSave(self, layoutEditor: LayoutEditorView, cid: int):
+        """Edit layout of a card from card list, save layout"""
         card = self._session.query(Card).filter_by(c_id=cid).one()
         card.c_layout_f, card.c_layout_b = layoutEditor.getContents()
         self._session.commit()
@@ -324,6 +332,7 @@ class Controller:
     # TOOLBAR MANAGE DECKS
 
     def openDeckList(self):
+        """Open deck list dialog"""
         decks: list[Deck] = self._session.query(Deck)
         deckList = DeckListView([deck.d_name for deck in decks], [deck.d_id for deck in decks])
         deckList.signalAdd.connect(lambda: self.addDeck(deckList))
@@ -333,6 +342,7 @@ class Controller:
         deckList.exec()
 
     def addDeck(self, deckList: DeckListView):
+        """Add deck new deck dialog"""
         cards = [card.c_name for card in self._session.query(Card).all()]
         if len(cards) == 0:
             error = ErrorMessage("Please add card templates first")
@@ -344,6 +354,7 @@ class Controller:
             deckForm.exec()
 
     def addDeckSave(self, deckList: DeckListView, deckForm: DeckFormView):
+        """Add new deck, refresh deck list"""
         deckName, cardName = deckForm.getData()
         card = self._session.query(Card).filter_by(c_name=cardName).first()
         if deckName == "" or cardName == "":
@@ -366,6 +377,7 @@ class Controller:
             info.exec()
 
     def editDeck(self, deckList: DeckListView):
+        """Edit deck from deck list"""
         selected = deckList.getSelectedId()
         if selected == -1:
             return
@@ -377,6 +389,7 @@ class Controller:
         editForm.exec()
 
     def editDeckSave(self, d_id: int, deckList: DeckListView, editForm: DeckFormView):
+        """Edit deck from deck list, refresh decks in deck list"""
         deckName, cardName = editForm.getData()
         nameCheck = self._session.query(Deck).filter(and_(Deck.d_name==deckName, Deck.d_id!=d_id)).first()
         if deckName == "" or cardName == "":
@@ -407,6 +420,7 @@ class Controller:
             info.exec()
 
     def deleteDeck(self, deckList: DeckListView):
+        """Delete deck from deck list, refresh deck list"""
         selected = deckList.getSelectedId()
         if selected == -1:
             return
@@ -422,6 +436,7 @@ class Controller:
         info.exec()
 
     def viewNotes(self, deckList: DeckListView):
+        """View notes of a deck from deck list"""
         selected = deckList.getSelectedId()
         if selected == -1:
             return
@@ -436,12 +451,14 @@ class Controller:
         noteBrowser.exec()
 
     def viewNotesAdd(self, card: Card, deck: Deck, noteBrowser: NoteBrowserView):
+        """View notes of a deck from deck list, add new note"""
         noteForm = NoteFormView(deck.d_name, json.loads(card.c_fields))
         noteForm.signalCancel.connect(noteForm.close)
         noteForm.signalSave.connect(lambda: self.viewNotesAddSave(card, deck, noteBrowser, noteForm))
         noteForm.exec()
 
     def viewNotesAddSave(self, card: Card, deck: Deck, noteBrowser: NoteBrowserView, noteForm: NoteFormView):
+        """Add new note, refresh note browser"""
         data = noteForm.getData()
         if "" in data:
             error = ErrorMessage("Field cannot be empty.")
@@ -458,6 +475,7 @@ class Controller:
             noteForm.close()
 
     def viewNotesEdit(self, card: Card, deck: Deck, noteBrowser: NoteBrowserView):
+        """Edit note from note browser"""
         selected = noteBrowser.getSelectedId()
         note = self._session.query(Note).filter_by(n_id=selected).one()
         noteForm = NoteFormView(deck.d_name, json.loads(card.c_fields), json.loads(note.n_data))
@@ -466,6 +484,7 @@ class Controller:
         noteForm.exec()
 
     def viewNotesEditSave(self, card: Card, deck: Deck, noteBrowser: NoteBrowserView, noteForm: NoteFormView):
+        """Edit note from note browser, refresh note browser view"""
         selected = noteBrowser.getSelectedId()
         data = noteForm.getData()
         if "" in data:
@@ -483,6 +502,7 @@ class Controller:
             noteForm.close()
 
     def viewNotesDelete(self, card: Card, deck: Deck, noteBrowser: NoteBrowserView):
+        """Delete note from note browser, refresh note browser"""
         selected = noteBrowser.getSelectedId()
         note = self._session.query(Note).filter_by(n_id=selected).one()
         self._session.delete(note)
@@ -496,6 +516,7 @@ class Controller:
     # ADD NOTE FORM
 
     def addNote(self, d_id: int):
+        """Add note"""
         deck = self._session.query(Deck).filter_by(d_id=d_id).one()
         card = self._session.query(Card).filter_by(c_id=deck.c_id).one()
         form = NoteFormView(deck.d_name, json.loads(card.c_fields))
@@ -504,6 +525,7 @@ class Controller:
         form.exec()
 
     def addNoteSave(self, form: NoteFormView, d_id: int):
+        """Add note and save"""
         data = form.getData()
         if "" in data:
             error = ErrorMessage("Field can't be empty")
@@ -518,6 +540,7 @@ class Controller:
 
     # STATS
     def display_deck_stats(self, d_id):
+        """Display deck stats for a given deck"""
         notes = self._session.query(Note).filter_by(d_id=d_id).all()
         dataPie = prepareDeckDataPie(notes)
         dataBar = prepareDeckDataBar(notes)
@@ -525,6 +548,7 @@ class Controller:
         window.exec()
 
     def display_flashcard_stats(self, n_id):
+        """Display note stats for a given note"""
         reviews = self._session.query(Review).filter_by(n_id=n_id).all()
         dataPie = prepareNoteDataPie(reviews)
         window = NoteStatsView(dataPie)

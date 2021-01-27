@@ -431,6 +431,7 @@ class NoteBrowserView:
         self._labelDeckName.setText(deck)
         self._tableNotes.setSelectionBehavior(QTableWidget.SelectRows)
         self.refresh(fields, data)
+        self._setButtonsEnabled(False)
 
     def _onClicked(self):
         self._selectedIdx = self._tableNotes.currentRow()
