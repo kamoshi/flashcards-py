@@ -4,12 +4,18 @@ from data.dbmodel import Note, Deck, Card
 
 
 class StudySession:
+    """
+    StudySession contains the information regarding state of the study session
+    """
     def __init__(self):
         self._currentCard: Optional[Card] = None
         self._currentDeck: Optional[Deck] = None
         self._notesToStudy: list[Note] = []
 
     def reset(self) -> None:
+        """
+        Resets the study session state
+        """
         self._currentCard = None
         self._currentDeck = None
         self._notesToStudy = []

@@ -4,7 +4,9 @@ import time
 import sqlalchemy.orm
 from sqlalchemy import and_
 
+from data.consts import CARD_FRONT_TEMPLATE, CARD_BACK_TEMPLATE
 from logic import batchutils
+from logic.statutils import prepareDeckDataPie, prepareDeckDataBar, prepareNoteDataPie
 from logic.studysession import StudySession
 from data.dbmodel import Card, Deck, Note, Review
 from views.views import CardFormView, MainWindowView, CardListView, ErrorMessage, InfoMessage, LayoutEditorView, \
@@ -14,6 +16,9 @@ from data import dbmodel as dbm
 
 
 class Controller:
+    """
+    Controller manages the windows used by the app.
+    """
     def __init__(self):
         self._mainWindow = MainWindowView()
         self._session: sqlalchemy.orm.Session = dbm.Session()
@@ -40,11 +45,13 @@ class Controller:
     # MAIN WINDOW
 
     def openMainDeckList(self):
+        """Updates deck list and opens it"""
         self._studySession.reset()
         self._mainWindow.setPage(0)
         self._mainWindow.updateDecksList([(deck.d_id, deck.d_name) for deck in self._session.query(Deck).all()])
 
     def openMainDetails(self, d_id: int):
+        """Updates detail page and opens it"""
         self.prepareStudySession(d_id)
         if not self._studySession.isActive():
             self.openMainDeckList()
@@ -55,6 +62,7 @@ class Controller:
             self._mainWindow.setPage(1)
 
     def openMainFlashcard(self, displayFront: bool):
+        """Opens flashcard page and updates it"""
         if not self._studySession.isFinished():
             deck = self._studySession.getDeck()
             card = self._studySession.getCard()
@@ -69,6 +77,7 @@ class Controller:
             self.openMainDeckList()
 
     def prepareStudySession(self, d_id: int):
+        """Prepares study session by loading deck data"""
         deck = self._session.query(Deck).filter_by(d_id=d_id).first()
         if not deck:
             self._studySession.reset()
@@ -82,11 +91,13 @@ class Controller:
         self._studySession.fill(card, deck, notes)
 
     def _onDeckClicked(self, d_id: int):
+        """Triggered when user select deck from the main window"""
         deck = self._session.query(Deck).filter_by(d_id=d_id).first()
         if deck:
             self.openMainDetails(deck.d_id)
 
     def _onDetailsStats(self):
+        """Triggered when user opens stats on the main window"""
         if not self._studySession.isActive():
             return
         deck = self._studySession.getDeck()
@@ -94,17 +105,21 @@ class Controller:
             self.display_deck_stats(deck.d_id)
 
     def _onDetailsQuickAdd(self):
+        """Triggered when user presses Quick Add button"""
         if self._studySession.isActive():
             self.addNote(self._studySession.getDeck().d_id)
 
     def _onFlashcardClose(self):
+        """Triggered when user closes flashcard"""
         if self._studySession.isActive():
             self.openMainDetails(self._studySession.getDeck().d_id)
 
     def _onFlashcardShow(self):
+        """Triggered when user presses the Show button for flashcard"""
         self.openMainFlashcard(displayFront=False)
 
     def _onFlashcardRate(self, rate: int):
+        """Triggered when user rates a flashcard"""
         note = self._studySession.popNextNote()
         review = Review(r_ease=rate, n_id=note.n_id)
         self._session.add(review)
@@ -120,6 +135,7 @@ class Controller:
         self.openMainFlashcard(displayFront=True)
 
     def _onFlashcardStats(self):
+        """Triggered when user opens stats for a flashcard"""
         if not self._studySession.isActive():
             return
         note = self._studySession.peekNextNote()
@@ -129,11 +145,13 @@ class Controller:
     # IMPORT / EXPORT
 
     def _onBatchImport(self):
+        """Triggered when user wants to open import"""
         importForm = ImportFormView()
         importForm.signalImport.connect(lambda: self.batchImport(importForm))
         importForm.exec()
 
     def batchImport(self, importForm: ImportFormView):
+        """Handle import"""
         path = importForm.getData()
         if not path:
             error = ErrorMessage("Please choose which file to import")
@@ -166,12 +184,14 @@ class Controller:
                 self._mainWindow.updateDecksList([(deck.d_id, deck.d_name) for deck in self._session.query(Deck).all()])
 
     def _onBatchExport(self):
+        """Triggered when user wants to export"""
         decks = self._session.query(Deck.d_name).all()
         exportForm = ExportFormView(list(map(lambda t: t[0], decks)))
         exportForm.signalExport.connect(lambda: self.batchExport(exportForm))
         exportForm.exec()
 
     def batchExport(self, exportForm: ExportFormView):
+        """Handle export"""
         deckName, filePath = exportForm.getData()
         if not deckName or not filePath:
             return
@@ -221,7 +241,7 @@ class Controller:
             error = ErrorMessage("Card name must be unique")
             error.exec()
         else:
-            newCard = Card(c_name=name, c_fields=json.dumps(fields))
+            newCard = Card(c_name=name, c_fields=json.dumps(fields), c_layout_f=CARD_FRONT_TEMPLATE, c_layout_b=CARD_BACK_TEMPLATE)
             print(newCard.c_id)
             self._session.add(newCard)
             self._session.commit()
@@ -499,10 +519,13 @@ class Controller:
     # STATS
     def display_deck_stats(self, d_id):
         notes = self._session.query(Note).filter_by(d_id=d_id).all()
-        window = DeckStatsView(notes)
+        dataPie = prepareDeckDataPie(notes)
+        dataBar = prepareDeckDataBar(notes)
+        window = DeckStatsView(dataPie, dataBar)
         window.exec()
 
     def display_flashcard_stats(self, n_id):
         reviews = self._session.query(Review).filter_by(n_id=n_id).all()
-        window = NoteStatsView(reviews)
+        dataPie = prepareNoteDataPie(reviews)
+        window = NoteStatsView(dataPie)
         window.exec()
